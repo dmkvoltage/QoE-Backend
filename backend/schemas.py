@@ -5,7 +5,7 @@ from typing import Optional, List
 # User schemas
 class UserBase(BaseModel):
     username: str
-    email: EmailStr
+    email: str
     provider: Optional[str] = None
 
 class UserCreate(UserBase):
