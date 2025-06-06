@@ -7,7 +7,6 @@ import os
 from backend import crud, models, schemas
 from backend.database import SessionLocal, engine, get_db
 
-
 # Load environment variables
 load_dotenv()
 
@@ -51,40 +50,54 @@ def health_check(db: Session = Depends(get_db)):
         )
 
 # User endpoints
-@app.post("/users/", response_model=schemas.User)
+@app.post("/users/", response_model=schemas.UserResponse)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_email(db, email=user.email)
+    db_user = crud.get_user_by_username(db, username=user.username)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Username already registered")
     return crud.create_user(db=db, user=user)
 
-@app.get("/users/{user_id}", response_model=schemas.User)
+@app.get("/users/{user_id}", response_model=schemas.UserResponse)
 def read_user(user_id: int, db: Session = Depends(get_db)):
-    db_user = crud.get_user(db, user_id=user_id)
+    db_user = crud.get_user_by_username(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-# Network metrics endpoints
-@app.post("/network-metrics/", response_model=schemas.NetworkMetrics)
-def create_network_metrics(
-    metrics: schemas.NetworkMetricsCreate, 
-    db: Session = Depends(get_db)
-):
-    return crud.create_network_metrics(db=db, metrics=metrics)
-
-@app.get("/network-metrics/{user_id}")
-def get_user_network_metrics(user_id: int, db: Session = Depends(get_db)):
-    return crud.get_network_metrics_by_user(db, user_id=user_id)
+@app.post("/auth/login", response_model=schemas.Token)
+def login_user(user_login: schemas.UserLogin, db: Session = Depends(get_db)):
+    user = crud.authenticate_user(db, user_login.username, user_login.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password"
+        )
+    # For simplicity, returning a basic token structure
+    # In production, use proper JWT tokens
+    return {"access_token": f"token_{user.id}", "token_type": "bearer"}
 
 # Feedback endpoints
-@app.post("/feedback/", response_model=schemas.Feedback)
-def create_feedback(feedback: schemas.FeedbackCreate, db: Session = Depends(get_db)):
-    return crud.create_feedback(db=db, feedback=feedback)
+@app.post("/feedback/", response_model=schemas.FeedbackResponse)
+def create_feedback(feedback: schemas.FeedbackCreate, user_id: int, db: Session = Depends(get_db)):
+    return crud.create_feedback(db=db, feedback=feedback, user_id=user_id)
 
-@app.get("/feedback/{user_id}")
-def get_user_feedback(user_id: int, db: Session = Depends(get_db)):
-    return crud.get_feedback_by_user(db, user_id=user_id)
+@app.get("/feedback/")
+def get_feedbacks(user_id: int = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return crud.get_feedbacks(db, user_id=user_id, skip=skip, limit=limit)
+
+# Network Log endpoints
+@app.post("/network-logs/", response_model=schemas.NetworkLogResponse)
+def create_network_log(log: schemas.NetworkLogCreate, user_id: int, db: Session = Depends(get_db)):
+    return crud.create_network_log(db=db, log=log, user_id=user_id)
+
+@app.get("/network-logs/")
+def get_network_logs(user_id: int = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return crud.get_network_logs(db, user_id=user_id, skip=skip, limit=limit)
+
+# Recommendations endpoint
+@app.get("/recommendations/")
+def get_recommendations(location: str, db: Session = Depends(get_db)):
+    return crud.get_provider_recommendations(db, location=location)
 
 if __name__ == "__main__":
     import uvicorn
