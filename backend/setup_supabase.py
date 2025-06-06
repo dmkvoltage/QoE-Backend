@@ -5,8 +5,8 @@ Run this script to create all necessary tables in your Supabase database
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
-from database import Base, engine
-import models
+from .database import Base, engine
+from . import models
 
 # Load environment variables
 load_dotenv()
