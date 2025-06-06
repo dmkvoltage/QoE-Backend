@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from passlib.context import CryptContext
-from .models1 import User, Feedback, NetworkLog
-from schemas import UserCreate, FeedbackCreate, NetworkLogCreate
+from .models import User, Feedback, NetworkLog
+from .schemas import UserCreate, FeedbackCreate, NetworkLogCreate
 from typing import List, Optional
 import statistics
 
